@@ -1,0 +1,35 @@
+{
+  "name": "personal profile",
+  "description": "A Personal WebSite",
+  "main": "",
+  "authors": [
+    "mohsen emami"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "mohsen",
+    "emami",
+    "mohsen",
+    "motamedi",
+    "mohsen",
+    "motamedi",
+    "emami",
+    "front_end",
+    "developer",
+    "programmer"
+  ],
+  "homepage": "https://github.com/BlackrockDigital/startbootstrap-freelancer",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "4.0.0-beta",
+    "font-awesome": "^4.7.0",
+    "jquery-easing": "*",
+    "popper.js": "^1.12.3"
+  }
+}
