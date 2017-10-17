@@ -1,5 +1,5 @@
 let gulp = require('gulp'),
- scss = require('gulp-scss'),
+ sass = require('gulp-sass'),
  browserSync = require('browser-sync').create(),
  header = require('gulp-header'),
  cleanCSS = require('gulp-clean-css'),
@@ -7,6 +7,7 @@ let gulp = require('gulp'),
  uglify = require('gulp-uglify'),
  filter = require('gulp-filter'),
  webpack = require('webpack'),
+ webpackDevServer = require('webpack-dev-server'),
  pkg = require('./package.json'),
  addStream = require('add-stream'),
  sourceMap = require('gulp-sourcemaps'),
@@ -16,8 +17,9 @@ let gulp = require('gulp'),
  mainBowerFiles = require('gulp-main-bower-files'),
  del = require('del'),
  srcFolder = 'source',
- publicFolder = 'public';
-
+ publicFolder = 'public',
+ bowerFolder = 'bower_components'
+let webpackConfig = require('./webpack.config')
 let isProduction = false;
 // let env = process.env.NODE_ENV = 'development';
 // let env = process.env.NODE_ENV = 'production';
@@ -25,12 +27,22 @@ let isProduction = false;
 // Set the banner content
 var banner = ['/*!\n',
   ' *  - <%= pkg.title %> v<%= pkg.version %> (<%= pkg.homepage %>)\n',
-  ' * Copyright 2013-' + (new Date()).getFullYear(), ' <%= pkg.author %>\n',
-  ' * Licensed under <%= pkg.license %> (https://github.com/BlackrockDigital/<%= pkg.name %>/blob/master/LICENSE)\n',
+  ' * Copyright 2017-' + (new Date()).getFullYear(), ' <%= pkg.author %>\n',
+  ' * Licensed under <%= pkg.license %>\n',
   ' */\n',
   ''
 ].join('');
 
+gulp.task('webpack', function() {
+  webpack(webpackConfig,
+    function(err, stats) {
+      if(err) throw new gutil.PluginError("webpack", err);
+      console.log("[webpack]", stats.toString({
+          // output options
+      }));
+  } 
+);
+});
 
 gulp.task('main-bower-files', function() {
   return gulp.src('./bower.json')
@@ -38,56 +50,22 @@ gulp.task('main-bower-files', function() {
       .pipe(gulp.dest('./public/bower/'));
 });
 
-function build (watch, callback) {
-  var plugins = [
-      new webpack.DefinePlugin({
-          'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development')
-      })
-  ];
-
-  if (isProduction) {
-      plugins.push(new webpack.optimize.UglifyJsPlugin());
-  }
-
-  webpack({
-      plugins: plugins,
-      cache: true,
-      watch: watch,
-      module: {
-          loaders: [
-              { test: /\.jsx?$/, exclude: /node_modules/, loader: 'babel-loader' }
-          ]
-      },
-      devtool: "#source-map",
-      entry: path.resolve(__dirname, 'source/index.js'),
-      output: {
-          filename: 'app.js',
-          path: path.resolve(__dirname, 'public')
-      }
-  }, function (err, stats) {
-      if (callback) callback();
-  });
-}
 
 
 gulp.task('index', function() {
   gulp.src('index.html')
     .pipe(gulp.dest(publicFolder));
-  gulp.src(['source/js/freelancer.js' ,'source/js/jqBootstrapValidation.js'])
-    .pipe(gulp.dest(publicFolder));
-
-  
 })
   
 
 // Compiles SCSS files from /scss into /css
 gulp.task('styles', function() {
-  return gulp.src(srcFolder + '/scss/freelancer.scss')
+  return gulp.src(srcFolder + '/sass/index.sass')
   .pipe(sourceMap.init())
   .pipe(header(banner ,{
     pkg: pkg
   }))
-  .pipe(scss())
+  .pipe(sass())
   .pipe(gif(isProduction ,
     uglify()
   ))
@@ -96,20 +74,40 @@ gulp.task('styles', function() {
 });
 
 gulp.task('assets' ,function(){
-  gulp.src([srcFolder + '/img/**/*'])
+  gulp.src([srcFolder + '/image/**/*'])
     .pipe(gulp.dest(publicFolder + '/assets/image/'));
 });
 
 gulp.task('clean',function(){
-  // gulp.src(publicFolder)
-  //   .pipe(clean());
-  del.sync('public/**')
+  del.sync(publicFolder);
+});
+
+gulp.task('bootstrap' ,function() {
+  gulp.src(srcFolder + '/sass/bootstrap.sass')
+    .pipe(sass({
+      includePaths: [bowerFolder + '/bootstrap-sass/assets/stylesheets']
+    }))
+    .pipe(gulp.dest(publicFolder + '/styles/'));
+});
+
+gulp.task('fonts', function() {
+  gulp.src(bowerFolder + '/bootstrap-sass/assets/fonts/**/*')
+  .pipe(gulp.dest(publicFolder + '/fonts/'));
+
+  gulp.src(bowerFolder + '/font-awesome/scss/font-awesome.scss')
+    .pipe(sass({
+      // includePaths: [bowerFolder + '/bootstrap-sass/assets/stylesheets']
+    }))
+    .pipe(gulp.dest(publicFolder + '/styles/'));
+
+  gulp.src(bowerFolder + '/font-awesome/fonts/*')
+    .pipe(gulp.dest(publicFolder + '/fonts/font-awesome/'));
 });
 
 // Default task
-gulp.task('default',sequence('clean' ,['styles' ,'index' ,'assets' ,'main-bower-files'] ,'browserSync'));
+gulp.task('default',sequence('build' ,'browserSync'));
 
-gulp.task('build',sequence(['clean'] ,['styles' ,'index' ,'assets' ,'main-bower-files' ,'watch'] ));
+gulp.task('build',sequence('clean' ,['styles','bootstrap' ,'fonts' ,'index' ,'assets' ,'main-bower-files' ] ,'webpack' ));
 
 // Configure the browserSync task
 gulp.task('browserSync', function() {
